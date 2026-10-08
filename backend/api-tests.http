@@ -1,0 +1,28 @@
+﻿@host = http://localhost:5069
+
+### Listele
+GET {{host}}/api/students
+
+### Ekle
+POST {{host}}/api/students
+Content-Type: application/json
+
+{ "firstName": "Ayşe", "lastName": "Yılmaz", "email": "ayse@example.com", "gradeLevel": 7 }
+
+### Tek kayıt
+GET {{host}}/api/students/1
+
+### Güncelle
+PUT {{host}}/api/students/1
+Content-Type: application/json
+
+{ "firstName": "Ayşe", "lastName": "Demir", "email": "ayse@example.com", "gradeLevel": 8 }
+
+### Geçersiz istek (400 beklenir)
+POST {{host}}/api/students
+Content-Type: application/json
+
+{ "firstName": "", "lastName": "X", "gradeLevel": 99 }
+
+### Sil
+DELETE {{host}}/api/students/1
