@@ -4,8 +4,8 @@ Basit öğrenci takip sistemi için ASP.NET Core Web API. Tek backend, tek verit
 
 ## Teknolojiler
 
-- .NET 9 (SDK 9.0.318), ASP.NET Core minimal API
-- Entity Framework Core 9 + Npgsql
+- .NET 10, ASP.NET Core minimal API
+- Entity Framework Core 10 + Npgsql EF Core provider 10
 - PostgreSQL 16
 
 ## Klasör yapısı
@@ -97,7 +97,7 @@ Uçtan uca test sonucu: POST 201, GET liste, PUT güncelleme, geçersiz POST 400
 
 ## Yapılanlar
 
-1. Ön koşullar: .NET 9 SDK, Node.js 24 LTS, dotnet-ef ve PostgreSQL 16 kuruldu.
+1. Ön koşullar: .NET 10 SDK, Node.js 24 LTS, dotnet-ef 10 ve PostgreSQL 16 kuruldu.
 2. Çözüm ve `OtsApi` Web API projesi oluşturuldu.
 3. Modeller, `AppDbContext`, bağlantı dizesi ve `InitialCreate` migration'ı eklendi, veritabanına uygulandı.
 4. Öğrenci CRUD endpoint'leri ve `.http` test dosyası yazıldı.
