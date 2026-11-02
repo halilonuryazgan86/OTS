@@ -16,5 +16,10 @@ public class Progress
     public Topic? Topic { get; set; }
     public ProgressStatus Status { get; set; }
     public DateTime? CompletedAt { get; set; }
-    public string? Note { get; set; }
+
+    // Öğretmenin girdiği işlem tarihi-saati (ör. dersin işlendiği an). Başlamadı durumunda boştur.
+    public DateTime? StatusDate { get; set; }
+
+    // Kaydın sisteme en son yazıldığı an ("son güncellemeler" sıralaması için).
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

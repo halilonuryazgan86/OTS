@@ -9,5 +9,9 @@ public class Student
     public int GradeLevel { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public int? TeacherId { get; set; }
+    public User? Teacher { get; set; }
+
     public List<Progress> Progresses { get; set; } = [];
+    public List<User> Parents { get; set; } = [];
 }

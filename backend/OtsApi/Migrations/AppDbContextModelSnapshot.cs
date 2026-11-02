@@ -17,7 +17,7 @@ namespace OtsApi.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.20")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -35,7 +35,12 @@ namespace OtsApi.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int?>("TeacherId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TeacherId");
 
                     b.ToTable("Courses");
                 });
@@ -51,13 +56,13 @@ namespace OtsApi.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("StatusDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("StudentId")
                         .HasColumnType("integer");
@@ -65,14 +70,59 @@ namespace OtsApi.Migrations
                     b.Property<int>("TopicId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TopicId");
+
+                    b.HasIndex("UpdatedAt");
 
                     b.HasIndex("StudentId", "TopicId")
                         .IsUnique();
 
                     b.ToTable("Progresses");
+                });
+
+            modelBuilder.Entity("OtsApi.Models.ProgressComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("TopicId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TopicId");
+
+                    b.HasIndex("StudentId", "TopicId", "CreatedAt");
+
+                    b.ToTable("ProgressComments");
                 });
 
             modelBuilder.Entity("OtsApi.Models.Student", b =>
@@ -103,7 +153,12 @@ namespace OtsApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("TeacherId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TeacherId");
 
                     b.ToTable("Students");
                 });
@@ -134,6 +189,78 @@ namespace OtsApi.Migrations
                     b.ToTable("Topics");
                 });
 
+            modelBuilder.Entity("OtsApi.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("StudentParents", b =>
+                {
+                    b.Property<int>("ChildrenId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ParentsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ChildrenId", "ParentsId");
+
+                    b.HasIndex("ParentsId");
+
+                    b.ToTable("StudentParents");
+                });
+
+            modelBuilder.Entity("OtsApi.Models.Course", b =>
+                {
+                    b.HasOne("OtsApi.Models.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("OtsApi.Models.Progress", b =>
                 {
                     b.HasOne("OtsApi.Models.Student", "Student")
@@ -153,6 +280,43 @@ namespace OtsApi.Migrations
                     b.Navigation("Topic");
                 });
 
+            modelBuilder.Entity("OtsApi.Models.ProgressComment", b =>
+                {
+                    b.HasOne("OtsApi.Models.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OtsApi.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OtsApi.Models.Topic", "Topic")
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("OtsApi.Models.Student", b =>
+                {
+                    b.HasOne("OtsApi.Models.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("OtsApi.Models.Topic", b =>
                 {
                     b.HasOne("OtsApi.Models.Course", "Course")
@@ -162,6 +326,21 @@ namespace OtsApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("StudentParents", b =>
+                {
+                    b.HasOne("OtsApi.Models.Student", null)
+                        .WithMany()
+                        .HasForeignKey("ChildrenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OtsApi.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("ParentsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("OtsApi.Models.Course", b =>

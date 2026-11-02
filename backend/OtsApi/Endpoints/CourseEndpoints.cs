@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using OtsApi.Data;
 using OtsApi.Models;
@@ -9,38 +10,50 @@ public record TopicRequest(string Name, int Order);
 public record TopicResponse(int Id, int CourseId, string Name, int Order);
 public record CourseResponse(int Id, string Name, List<TopicResponse> Topics);
 
+// Öğretmen yalnızca kendi derslerini ve konularını yönetir.
 public static class CourseEndpoints
 {
     public static void MapCourseEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/courses");
+        var g = app.MapGroup("/api/courses").RequireAuthorization("Teacher");
 
-        g.MapGet("/", async (AppDbContext db) =>
-            await db.Courses.AsNoTracking().OrderBy(c => c.Id).Select(c => new CourseResponse(c.Id, c.Name,
-                c.Topics.OrderBy(t => t.Order).ThenBy(t => t.Id)
-                    .Select(t => new TopicResponse(t.Id, t.CourseId, t.Name, t.Order)).ToList())).ToListAsync());
+        g.MapGet("/", async (ClaimsPrincipal user, AppDbContext db) =>
+        {
+            var me = user.UserId();
+            return await db.Courses.AsNoTracking().Where(c => c.TeacherId == me).OrderBy(c => c.Name)
+                .Select(c => new CourseResponse(c.Id, c.Name,
+                    c.Topics.OrderBy(t => t.Order).ThenBy(t => t.Id)
+                        .Select(t => new TopicResponse(t.Id, t.CourseId, t.Name, t.Order)).ToList()))
+                .ToListAsync();
+        });
 
-        g.MapGet("/{id:int}", async (int id, AppDbContext db) =>
-            await db.Courses.AsNoTracking().Where(c => c.Id == id).Select(c => new CourseResponse(c.Id, c.Name,
-                c.Topics.OrderBy(t => t.Order).ThenBy(t => t.Id)
-                    .Select(t => new TopicResponse(t.Id, t.CourseId, t.Name, t.Order)).ToList())).FirstOrDefaultAsync()
-                is { } c ? Results.Ok(c) : Results.NotFound());
+        g.MapGet("/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db) =>
+        {
+            var me = user.UserId();
+            var c = await db.Courses.AsNoTracking().Where(c => c.Id == id && c.TeacherId == me)
+                .Select(c => new CourseResponse(c.Id, c.Name,
+                    c.Topics.OrderBy(t => t.Order).ThenBy(t => t.Id)
+                        .Select(t => new TopicResponse(t.Id, t.CourseId, t.Name, t.Order)).ToList()))
+                .FirstOrDefaultAsync();
+            return c is null ? Results.NotFound() : Results.Ok(c);
+        });
 
-        g.MapPost("/", async (CourseRequest req, AppDbContext db) =>
+        g.MapPost("/", async (CourseRequest req, ClaimsPrincipal user, AppDbContext db) =>
         {
             if (ValidateName(req.Name, "Ders adı") is { } errors) return Results.ValidationProblem(errors);
 
-            var c = new Course { Name = req.Name.Trim() };
+            var c = new Course { Name = req.Name.Trim(), TeacherId = user.UserId() };
             db.Courses.Add(c);
             await db.SaveChangesAsync();
             return Results.Created($"/api/courses/{c.Id}", new CourseResponse(c.Id, c.Name, []));
         });
 
-        g.MapPut("/{id:int}", async (int id, CourseRequest req, AppDbContext db) =>
+        g.MapPut("/{id:int}", async (int id, CourseRequest req, ClaimsPrincipal user, AppDbContext db) =>
         {
             if (ValidateName(req.Name, "Ders adı") is { } errors) return Results.ValidationProblem(errors);
 
-            var c = await db.Courses.FindAsync(id);
+            var me = user.UserId();
+            var c = await db.Courses.FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == me);
             if (c is null) return Results.NotFound();
 
             c.Name = req.Name.Trim();
@@ -49,9 +62,10 @@ public static class CourseEndpoints
         });
 
         // Dersin konuları ve bu konulara ait ilerleme kayıtları da (cascade) silinir.
-        g.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
+        g.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db) =>
         {
-            var c = await db.Courses.FindAsync(id);
+            var me = user.UserId();
+            var c = await db.Courses.FirstOrDefaultAsync(c => c.Id == id && c.TeacherId == me);
             if (c is null) return Results.NotFound();
 
             db.Courses.Remove(c);
@@ -59,10 +73,11 @@ public static class CourseEndpoints
             return Results.NoContent();
         });
 
-        g.MapPost("/{id:int}/topics", async (int id, TopicRequest req, AppDbContext db) =>
+        g.MapPost("/{id:int}/topics", async (int id, TopicRequest req, ClaimsPrincipal user, AppDbContext db) =>
         {
             if (Validate(req) is { } errors) return Results.ValidationProblem(errors);
-            if (!await db.Courses.AnyAsync(c => c.Id == id)) return Results.NotFound();
+            var me = user.UserId();
+            if (!await db.Courses.AnyAsync(c => c.Id == id && c.TeacherId == me)) return Results.NotFound();
 
             var t = new Topic { CourseId = id, Name = req.Name.Trim(), Order = req.Order };
             db.Topics.Add(t);
@@ -70,13 +85,13 @@ public static class CourseEndpoints
             return Results.Created($"/api/topics/{t.Id}", ToResponse(t));
         });
 
-        var topics = app.MapGroup("/api/topics");
+        var topics = app.MapGroup("/api/topics").RequireAuthorization("Teacher");
 
-        topics.MapPut("/{id:int}", async (int id, TopicRequest req, AppDbContext db) =>
+        topics.MapPut("/{id:int}", async (int id, TopicRequest req, ClaimsPrincipal user, AppDbContext db) =>
         {
             if (Validate(req) is { } errors) return Results.ValidationProblem(errors);
 
-            var t = await db.Topics.FindAsync(id);
+            var t = await FindOwnedTopic(db, id, user);
             if (t is null) return Results.NotFound();
 
             t.Name = req.Name.Trim();
@@ -85,15 +100,21 @@ public static class CourseEndpoints
             return Results.Ok(ToResponse(t));
         });
 
-        topics.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
+        topics.MapDelete("/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db) =>
         {
-            var t = await db.Topics.FindAsync(id);
+            var t = await FindOwnedTopic(db, id, user);
             if (t is null) return Results.NotFound();
 
             db.Topics.Remove(t);
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+    }
+
+    static Task<Topic?> FindOwnedTopic(AppDbContext db, int id, ClaimsPrincipal user)
+    {
+        var me = user.UserId();
+        return db.Topics.FirstOrDefaultAsync(t => t.Id == id && t.Course!.TeacherId == me);
     }
 
     static TopicResponse ToResponse(Topic t) => new(t.Id, t.CourseId, t.Name, t.Order);

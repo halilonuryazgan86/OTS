@@ -1,64 +1,128 @@
 ﻿@host = http://localhost:5069
 
-### Listele
-GET {{host}}/api/students
+### Öğretmen girişi (Development seed hesabı) — yanıttaki token'ı aşağıya kopyalayın
+POST {{host}}/api/auth/login
+Content-Type: application/json
 
-### Ekle
+{ "email": "ogretmen@ots.local", "password": "Ogretmen123!" }
+
+###
+@token = BURAYA_TOKEN
+
+### Oturum bilgisi
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Öğretmen ana sayfası
+GET {{host}}/api/dashboard
+Authorization: Bearer {{token}}
+
+### Öğrencileri listele (yalnızca giriş yapan öğretmenin öğrencileri)
+GET {{host}}/api/students
+Authorization: Bearer {{token}}
+
+### Öğrenci ekle
 POST {{host}}/api/students
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "firstName": "Ayşe", "lastName": "Yılmaz", "email": "ayse@example.com", "gradeLevel": 7 }
 
-### Tek kayıt
+### Öğrenci detayı (velilerle)
 GET {{host}}/api/students/1
+Authorization: Bearer {{token}}
 
-### Güncelle
+### Öğrenci güncelle
 PUT {{host}}/api/students/1
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "firstName": "Ayşe", "lastName": "Demir", "email": "ayse@example.com", "gradeLevel": 8 }
 
 ### Geçersiz istek (400 beklenir)
 POST {{host}}/api/students
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "firstName": "", "lastName": "X", "gradeLevel": 99 }
 
-### Sil
-DELETE {{host}}/api/students/1
+### Öğrenciye veli hesabı oluştur ve bağla
+POST {{host}}/api/students/1/parents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "fullName": "Fatma Yılmaz", "email": "fatma@example.com", "password": "Veli1234!" }
+
+### Veli şifresini yenile
+PUT {{host}}/api/students/1/parents/2/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "password": "YeniSifre123" }
+
+### Veliyi öğrenciden kaldır
+DELETE {{host}}/api/students/1/parents/2
+Authorization: Bearer {{token}}
 
 ### Dersleri listele (konularla)
 GET {{host}}/api/courses
+Authorization: Bearer {{token}}
 
 ### Ders ekle
 POST {{host}}/api/courses
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Matematik" }
 
 ### Derse konu ekle
 POST {{host}}/api/courses/1/topics
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Kesirler", "order": 1 }
 
 ### Konu güncelle
 PUT {{host}}/api/topics/1
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "name": "Kesirler ve Ondalıklar", "order": 1 }
 
-### Öğrencinin ilerlemesi (tüm konular)
+### Öğrencinin ilerlemesi (öğretmen veya bağlı veli)
 GET {{host}}/api/students/1/progress
+Authorization: Bearer {{token}}
 
-### İlerleme güncelle (NotStarted | InProgress | Completed)
+### İlerleme güncelle (NotStarted | InProgress | Completed) — yalnızca öğretmen
 PUT {{host}}/api/students/1/progress/1
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "status": "Completed", "note": "Testten 90 aldı." }
 
+### Veli: çocuklarım (veli token'ı ile)
+GET {{host}}/api/my/children
+Authorization: Bearer {{token}}
+
+### Veli: son gelişmeler (veli token'ı ile)
+GET {{host}}/api/my/activity
+Authorization: Bearer {{token}}
+
+### Şifre değiştir
+PUT {{host}}/api/auth/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "Ogretmen123!", "newPassword": "YeniSifre123" }
+
 ### Konu sil
 DELETE {{host}}/api/topics/1
+Authorization: Bearer {{token}}
 
 ### Ders sil (konular ve ilerlemeler de silinir)
 DELETE {{host}}/api/courses/1
+Authorization: Bearer {{token}}
+
+### Öğrenci sil
+DELETE {{host}}/api/students/1
+Authorization: Bearer {{token}}
