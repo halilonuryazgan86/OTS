@@ -26,3 +26,39 @@ Content-Type: application/json
 
 ### Sil
 DELETE {{host}}/api/students/1
+
+### Dersleri listele (konularla)
+GET {{host}}/api/courses
+
+### Ders ekle
+POST {{host}}/api/courses
+Content-Type: application/json
+
+{ "name": "Matematik" }
+
+### Derse konu ekle
+POST {{host}}/api/courses/1/topics
+Content-Type: application/json
+
+{ "name": "Kesirler", "order": 1 }
+
+### Konu güncelle
+PUT {{host}}/api/topics/1
+Content-Type: application/json
+
+{ "name": "Kesirler ve Ondalıklar", "order": 1 }
+
+### Öğrencinin ilerlemesi (tüm konular)
+GET {{host}}/api/students/1/progress
+
+### İlerleme güncelle (NotStarted | InProgress | Completed)
+PUT {{host}}/api/students/1/progress/1
+Content-Type: application/json
+
+{ "status": "Completed", "note": "Testten 90 aldı." }
+
+### Konu sil
+DELETE {{host}}/api/topics/1
+
+### Ders sil (konular ve ilerlemeler de silinir)
+DELETE {{host}}/api/courses/1

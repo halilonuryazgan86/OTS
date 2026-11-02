@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net.Mail;
+using Microsoft.EntityFrameworkCore;
 using OtsApi.Data;
 using OtsApi.Models;
 
@@ -69,9 +70,13 @@ public static class StudentEndpoints
     {
         var errors = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(r.FirstName)) errors["firstName"] = ["Ad zorunlu."];
+        else if (r.FirstName.Trim().Length > 100) errors["firstName"] = ["Ad en fazla 100 karakter olabilir."];
         if (string.IsNullOrWhiteSpace(r.LastName)) errors["lastName"] = ["Soyad zorunlu."];
+        else if (r.LastName.Trim().Length > 100) errors["lastName"] = ["Soyad en fazla 100 karakter olabilir."];
         if (r.GradeLevel is < 1 or > 12) errors["gradeLevel"] = ["Sınıf 1 ile 12 arasında olmalı."];
-        if (!string.IsNullOrWhiteSpace(r.Email) && !r.Email.Contains('@')) errors["email"] = ["Geçersiz e-posta."];
+        if (!string.IsNullOrWhiteSpace(r.Email) &&
+            (r.Email.Trim().Length > 200 || !MailAddress.TryCreate(r.Email.Trim(), out _)))
+            errors["email"] = ["Geçersiz e-posta."];
         return errors.Count > 0 ? errors : null;
     }
 }
